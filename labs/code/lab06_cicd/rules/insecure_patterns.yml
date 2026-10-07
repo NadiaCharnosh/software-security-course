@@ -1,0 +1,24 @@
+# Приклади власних правил Semgrep (лекція 14). Здобувач додає правило свого варіанта.
+rules:
+  - id: python-eval-untrusted
+    languages: [python]
+    severity: ERROR
+    message: Виклик eval() на потенційно недовірених даних (CWE-95).
+    patterns:
+      - pattern: eval(...)
+
+  - id: python-md5-for-password
+    languages: [python]
+    severity: WARNING
+    message: MD5/SHA-1 непридатні для зберігання паролів (CWE-916). Використайте Argon2id.
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+
+  - id: python-subprocess-shell-true
+    languages: [python]
+    severity: ERROR
+    message: subprocess із shell=True на змінних даних — ін'єкція команди ОС (CWE-78).
+    patterns:
+      - pattern: subprocess.run(..., shell=True, ...)

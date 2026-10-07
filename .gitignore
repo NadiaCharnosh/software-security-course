@@ -1,0 +1,22 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# ── Середовище та згенероване лабами ──
+.env
+*.db
+*.sqlite3
+reports/
+sbom.json
+
+# ── ОС / редактори ──
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

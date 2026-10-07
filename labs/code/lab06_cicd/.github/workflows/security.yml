@@ -1,0 +1,59 @@
+# Конвеєр контролю захищеності для лабораторної роботи 6.
+# Здобувач доповнює критерій проходження (quality gate) згідно зі своїм варіантом.
+name: security
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read   # мінімальні права токена (лекція 15)
+
+jobs:
+  sast:
+    name: Статичний аналіз (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Встановлення інструментів
+        run: pip install bandit semgrep
+      # Ціль SAST — каталог target/ із копією застосунку ЛР5 (див. методичку, крок 7).
+      - name: Bandit
+        run: bandit -r target -f json -o bandit.json || true
+      - name: Semgrep (власні правила + реєстр)
+        run: semgrep --config rules/ --config "p/python" --json --output semgrep.json target || true
+      # TODO(варіант): реалізувати quality gate свого варіанта, наприклад
+      # «блокувати складання за наявності знахідок рівня HIGH».
+      - name: Quality gate
+        run: python gate.py
+
+  sca:
+    name: Аналіз складу ПЗ (SCA) та SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Встановлення інструментів
+        run: pip install pip-audit cyclonedx-bom
+      # Ціль SCA — навчальний перелік залежностей audit_target.txt
+      # (застосунок ЛР5 навмисно не має вразливих залежностей).
+      - name: Пошук уразливих залежностей
+        run: pip-audit -r audit_target.txt || true
+      - name: Формування SBOM (CycloneDX)
+        run: cyclonedx-py requirements -i audit_target.txt -o sbom.json || true
+
+  secrets:
+    name: Сканування секретів
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2

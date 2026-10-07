@@ -1,0 +1,53 @@
+# Стенд лабораторного практикуму з дисципліни «Безпека програмного забезпечення».
+#
+# УВАГА. Служба vulnapp містить НАВМИСНО ВРАЗЛИВИЙ застосунок. Порт публікується
+# виключно на петльовому інтерфейсі 127.0.0.1. Не змінюйте прив'язку адреси,
+# не виносьте службу за межі цієї мережі та не розгортайте її на віддалених вузлах.
+
+# Явне ім'я проєкту: інакше Compose виводить його з назви каталогу,
+# а кирилична назва дає недопустиму мітку образу.
+name: bpz-labs
+
+services:
+  vulnapp:
+    build: ./lab05_vulnapp
+    container_name: bpz-vulnapp
+    # Прив'язка саме до 127.0.0.1, а не 0.0.0.0 — застосунок недоступний ззовні.
+    ports:
+      - "127.0.0.1:${VULNAPP_PORT:-8080}:5000"
+    environment:
+      VULNAPP_SECRET: ${VULNAPP_SECRET:-dev-secret}
+      VARIANT: ${VARIANT:-1}
+    networks:
+      - bpz-isolated
+    restart: "no"
+
+  # Внутрішня служба, доступна лише з мережі стенда. Використовується
+  # в завданні на SSRF (лабораторна робота 5) як «внутрішній» ресурс.
+  internal:
+    build: ./lab05_vulnapp
+    container_name: bpz-internal
+    command: ["python", "internal.py"]
+    environment:
+      VARIANT: ${VARIANT:-1}
+    networks:
+      - bpz-isolated
+    restart: "no"
+
+  # Інструменти аналізу (ЛР6). Запускається на вимогу:
+  #   docker compose run --rm tools semgrep --config rules/ /work
+  tools:
+    build: ./lab06_cicd
+    container_name: bpz-tools
+    volumes:
+      - ./:/work:ro
+      - ./reports:/reports
+    working_dir: /work
+    networks:
+      - bpz-isolated
+    profiles: ["tools"]
+
+networks:
+  bpz-isolated:
+    driver: bridge
+    internal: false   # потрібен доступ до реєстру пакетів під час складання образів
